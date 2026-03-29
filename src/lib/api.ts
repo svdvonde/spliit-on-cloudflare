@@ -322,7 +322,7 @@ export async function updateExpense(
     (id) => !nextDocumentIds.includes(id),
   )
 
-  db.batch([
+  await db.batch([
     logActivityStatement,
     db
       .update(schema.expense)
@@ -430,7 +430,7 @@ export async function updateExpense(
           inArray(schema.expenseDocument.id, documentIdsToDelete),
         ),
       ),
-  ])
+  ]);
 
   return { id: expenseId }
 }

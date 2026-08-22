@@ -8,6 +8,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from '@/components/ui/command'
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer'
 import {
@@ -112,8 +113,8 @@ function CategoryCommand({
   return (
     <Command>
       <CommandInput placeholder={t('search')} className="text-base" />
-      <CommandEmpty>{t('noCategory')}</CommandEmpty>
-      <div className="w-full max-h-[300px] overflow-y-auto">
+      <CommandList>
+        <CommandEmpty>{t('noCategory')}</CommandEmpty>
         {Object.entries(categoriesByGroup).map(
           ([group, groupCategories], index) => (
             <CommandGroup key={index} heading={t(`${group}.heading`)}>
@@ -134,7 +135,7 @@ function CategoryCommand({
             </CommandGroup>
           ),
         )}
-      </div>
+      </CommandList>
     </Command>
   )
 }

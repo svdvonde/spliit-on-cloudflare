@@ -19,6 +19,7 @@
       "database_name": "spliit-db",
       "database_id": "<YOUR D1 DATABASE ID>",
       "migrations_dir": "drizzle/migrations",
+      "migrations_pattern": "drizzle/migrations/*/migration.sql",
       "preview_database_id": "DB"
     }
   ],

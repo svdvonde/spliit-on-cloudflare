@@ -540,7 +540,9 @@ export async function updateGroup(
           ),
         )
     }),
-    db.insert(schema.participant).values(newParticipants),
+    ...(newParticipants.length > 0
+      ? [db.insert(schema.participant).values(newParticipants)]
+      : []),
   ])
 }
 
@@ -609,8 +611,8 @@ export async function getGroupExpenses(
     offset: options && options.offset,
     limit: options && options.length,
     with: {
-      paidBy: true,
       category: true,
+      paidBy: true,
       documents: true,
       paidFor: {
         with: {
@@ -642,6 +644,43 @@ export async function getGroupExpenses(
 export async function getGroupExpenseCount(groupId: string) {
   const db = getDb()
   return db.$count(schema.expense, eq(schema.expense.groupId, groupId))
+}
+
+/**
+ * Returns the currently active recurring expenses of a group: the latest frame
+ * of every ongoing recurring series. Each materialized frame keeps its own
+ * `recurringExpenseLink`, but only the current frame's link is still "open"
+ * (`nextExpenseCreatedAt` is null) — past frames have it set once their
+ * successor is created (see `createRecurringExpenses`). Filtering on the open
+ * link ensures a single subscription is counted only once. Used for recurring
+ * stats (#508).
+ */
+export async function getActiveRecurringExpenses(groupId: string) {
+  const db = getDb()
+
+  await createRecurringExpenses()
+
+  return db.query.expense.findMany({
+    columns: {
+      id: true,
+      title: true,
+      amount: true,
+      recurrenceRule: true,
+      isReimbursement: true,
+    },
+    with: {
+      category: true,
+    },
+    where: {
+      groupId,
+      isReimbursement: false,
+      recurrenceRule: { ne: RecurrenceRule.NONE },
+      recurringExpenseLink: {
+        nextExpenseCreatedAt: { isNull: true },
+      },
+    },
+    orderBy: { amount: 'desc' },
+  })
 }
 
 export async function getExpense(groupId: string, expenseId: string) {

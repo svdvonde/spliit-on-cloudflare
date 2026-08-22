@@ -55,7 +55,12 @@ const inputCoercedToNumber = z.union([
 export const expenseFormSchema = z
   .object({
     expenseDate: z.coerce.date(),
-    title: z.string({ required_error: 'titleRequired' }).min(2, 'min2'),
+    title: z
+      .string({
+        error: (issue) =>
+          issue.input === undefined ? 'titleRequired' : undefined,
+      })
+      .min(2, 'min2'),
     category: z.coerce.number().default(0),
     amount: z
       .union(
@@ -71,7 +76,10 @@ export const expenseFormSchema = z
             return valueAsNumber
           }),
         ],
-        { required_error: 'amountRequired' },
+        {
+          error: (issue) =>
+            issue.input === undefined ? 'amountRequired' : undefined,
+        },
       )
       .refine((amount) => amount != 0, 'amountNotZero')
       .refine((amount) => amount <= 10_000_000_00, 'amountTenMillion'),
@@ -90,7 +98,10 @@ export const expenseFormSchema = z
         inputCoercedToNumber.refine((amount) => amount > 0, 'ratePositive'),
       ])
       .optional(),
-    paidBy: z.string({ required_error: 'paidByRequired' }),
+    paidBy: z.string({
+      error: (issue) =>
+        issue.input === undefined ? 'paidByRequired' : undefined,
+    }),
     paidFor: z
       .array(
         z.object({
@@ -209,7 +220,10 @@ export const expenseFormSchema = z
     }
   })
 
-export type ExpenseFormValues = z.infer<typeof expenseFormSchema>
+export type ExpenseFormValues = z.output<typeof expenseFormSchema>
+// Raw form input type (before zod transforms/coercions). react-hook-form
+// operates on these values; the resolver produces ExpenseFormValues on submit.
+export type ExpenseFormInput = z.input<typeof expenseFormSchema>
 
 export type SplittingOptions = {
   // Used for saving default splitting options in localStorage

@@ -15,7 +15,7 @@ See the difference between Spliit `1.19.1` hosted on Vercel (free tier) vs. Spli
 
 ## Changes Compared to Spliit
 
-- [x] Based on Spliit `1.19.1`
+- [x] Based on Spliit `1.22.0`
 - [x] Can run on the Cloudflare free tier.
 - [x] Import groups from Spliit, functionality courtesy of [@Uli-Z](https://github.com/Uli-Z/spliit-room/tree/feature/generic-import) (adapted for Cloudflare).
 

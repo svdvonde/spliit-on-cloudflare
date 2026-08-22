@@ -1,8 +1,9 @@
 import { getCurrency } from '@/lib/currency'
-import { getGroup, getGroupExpenses } from '@/lib/api'
+import { getExpenseShares } from '@/lib/shares'
 import { formatAmountAsDecimal, getCurrencyFromGroup } from '@/lib/utils'
 import { Parser } from '@json2csv/plainjs'
-import contentDisposition from 'content-disposition'
+import { getGroup, getGroupExpenses } from '@/lib/api'
+import {create as contentDisposition} from 'content-disposition'
 import { NextResponse } from 'next/server'
 
 const splitModeLabel = {
@@ -10,6 +11,17 @@ const splitModeLabel = {
   BY_SHARES: 'Unevenly – By shares',
   BY_PERCENTAGE: 'Unevenly – By percentage',
   BY_AMOUNT: 'Unevenly – By amount',
+}
+
+/**
+ * Prevents CSV formula/command injection (CWE-1236): a cell beginning with
+ * =, +, -, @, tab or carriage return can be executed as a formula by spreadsheet
+ * applications (Excel, LibreOffice, Sheets). Expense titles, category and
+ * participant names are user-controlled, so prefix such text cells with a single
+ * quote to neutralize them.
+ */
+function escapeCsvFormula(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
 }
 
 function formatDate(isoDateString: Date): string {
@@ -71,67 +83,72 @@ export async function GET(
     { label: 'Is Reimbursement', value: 'isReimbursement' },
     { label: 'Split mode', value: 'splitMode' },
     ...group.participants.map((participant) => ({
-      label: participant.name,
+      label: escapeCsvFormula(participant.name),
       value: participant.name,
     })),
   ]
 
   const currency = getCurrencyFromGroup(group)
 
-  const expenseRows = expenses.map((expense) => ({
-    date: formatDate(expense.expenseDate),
-    title: expense.title,
-    categoryName: expense.category?.name || '',
-    currency: group.currencyCode ?? group.currency,
-    amount: formatAmountAsDecimal(expense.amount, currency),
-    originalAmount: expense.originalAmount
-      ? formatAmountAsDecimal(
-          expense.originalAmount,
-          getCurrency(expense.originalCurrency),
-        )
-      : null,
-    originalCurrency: expense.originalCurrency,
-    conversionRate: expense.conversionRate ? expense.conversionRate : null,
-    isReimbursement: expense.isReimbursement ? 'Yes' : 'No',
-    splitMode: splitModeLabel[expense.splitMode],
-    ...Object.fromEntries(
-      group.participants.map((participant) => {
-        const { totalShares, participantShare } = expense.paidFor.reduce(
-          (acc, { participant: paidForParticipant, shares }) => {
-            acc.totalShares += shares
-            if (paidForParticipant.id === participant.id) {
-              acc.participantShare = shares
-            }
-            return acc
-          },
-          { totalShares: 0, participantShare: 0 },
-        )
+  const expenseRows = expenses.map((expense) => {
+    const shares = getExpenseShares(expense)
 
-        const isPaidByParticipant = expense.paidBy.id === participant.id
-        const participantAmountShare = +formatAmountAsDecimal(
-          (expense.amount / totalShares) * participantShare,
-          currency,
-        )
+    return {
+      date: formatDate(expense.expenseDate),
+      title: escapeCsvFormula(expense.title),
+      categoryName: escapeCsvFormula(expense.category?.name || ''),
+      currency: group.currencyCode ?? group.currency,
+      amount: formatAmountAsDecimal(expense.amount, currency),
+      originalAmount: expense.originalAmount
+        ? formatAmountAsDecimal(
+            expense.originalAmount,
+            getCurrency(expense.originalCurrency),
+          )
+        : null,
+      originalCurrency: expense.originalCurrency,
+      conversionRate: expense.conversionRate
+        ? expense.conversionRate.toString()
+        : null,
+      isReimbursement: expense.isReimbursement ? 'Yes' : 'No',
+      splitMode: splitModeLabel[expense.splitMode],
+      ...Object.fromEntries(
+        group.participants.map((participant) => {
+          const isPaidByParticipant = expense.paidBy.id === participant.id
+          const participantAmountShare = +formatAmountAsDecimal(
+            shares.get(participant.id) ?? 0,
+            currency,
+          )
 
-        return [
-          participant.name,
-          participantAmountShare * (isPaidByParticipant ? 1 : -1),
-        ]
-      }),
-    ),
-  }))
+          return [
+            participant.name,
+            participantAmountShare * (isPaidByParticipant ? 1 : -1),
+          ]
+        }),
+      ),
+    }
+  })
 
   const json2csvParser = new Parser({ fields })
   const csv = json2csvParser.parse(expenseRows)
 
   const date = new Date().toISOString().split('T')[0]
-  const filename = `Spliit Export - ${group.name} - ${date}.csv`
+
+  // Create an ASCII-safe version of the group name for the 'filename' parameter
+  const asciiSafeGroupName = group.name.replace(/[^\x00-\x7F]/g, '_') // Replace non-ASCII with underscore
+  const asciiFilename = `Spliit Export - ${asciiSafeGroupName} - ${date}.csv`
+
+  // Use the original group name for the 'filename*' parameter (UTF-8 encoded)
+  const fullFilename = `Spliit Export - ${group.name} - ${date}.csv`
+  const encodedFullFilename = encodeURIComponent(fullFilename)
 
   // \uFEFF character is added at the beginning of the CSV content to ensure that it is interpreted as UTF-8 with BOM (Byte Order Mark), which helps some applications correctly interpret the encoding.
   return new NextResponse(`\uFEFF${csv}`, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': contentDisposition(filename),
+      'Content-Disposition': contentDisposition(fullFilename, {
+        type: 'attachment',
+        fallback: asciiFilename,
+      }),
     },
   })
 }

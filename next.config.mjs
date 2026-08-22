@@ -26,9 +26,14 @@ if (process.env.S3_UPLOAD_ENDPOINT) {
 initOpenNextCloudflareForDev();
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Emit a self-contained server into .next/standalone, containing only the
+  // files Next.js traced as actually reachable at runtime. The Docker runtime
+  // stage copies that instead of a full production `node_modules`.
+  output: 'standalone',
   images: {
     remotePatterns,
   },
+  reactCompiler: true,
   // Required to run in a codespace (see https://github.com/vercel/next.js/issues/58019)
   experimental: {
     serverActions: {

@@ -1,9 +1,9 @@
 import { getCurrency } from '@/lib/currency'
-import { prisma } from '@/lib/prisma'
 import { getExpenseShares } from '@/lib/shares'
 import { formatAmountAsDecimal, getCurrencyFromGroup } from '@/lib/utils'
 import { Parser } from '@json2csv/plainjs'
-import { create as contentDisposition } from 'content-disposition'
+import { getGroup, getGroupExpenses } from '@/lib/api'
+import {create as contentDisposition} from 'content-disposition'
 import { NextResponse } from 'next/server'
 
 const splitModeLabel = {
@@ -37,38 +37,13 @@ export async function GET(
   { params }: { params: Promise<{ groupId: string }> },
 ) {
   const { groupId } = await params
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    select: {
-      id: true,
-      name: true,
-      currency: true,
-      currencyCode: true,
-      expenses: {
-        select: {
-          // Seeds which participant is offered the leftover minor unit of an
-          // uneven split, so the export agrees with the balances tab.
-          id: true,
-          expenseDate: true,
-          title: true,
-          category: { select: { name: true } },
-          amount: true,
-          originalAmount: true,
-          originalCurrency: true,
-          conversionRate: true,
-          paidById: true,
-          paidFor: { select: { participantId: true, shares: true } },
-          isReimbursement: true,
-          splitMode: true,
-        },
-      },
-      participants: { select: { id: true, name: true } },
-    },
-  })
+  const group = await getGroup(groupId)
 
   if (!group) {
     return NextResponse.json({ error: 'Invalid group ID' }, { status: 404 })
   }
+
+  const expenses = await getGroupExpenses(groupId)
 
   /*
 
@@ -115,7 +90,7 @@ export async function GET(
 
   const currency = getCurrencyFromGroup(group)
 
-  const expenses = group.expenses.map((expense) => {
+  const expenseRows = expenses.map((expense) => {
     const shares = getExpenseShares(expense)
 
     return {
@@ -138,10 +113,7 @@ export async function GET(
       splitMode: splitModeLabel[expense.splitMode],
       ...Object.fromEntries(
         group.participants.map((participant) => {
-          const isPaidByParticipant = expense.paidById === participant.id
-          // The same apportionment the balances tab uses, so a participant's
-          // column here matches what they are actually charged: whole minor
-          // units, honouring the split mode, adding up to the expense amount.
+          const isPaidByParticipant = expense.paidBy.id === participant.id
           const participantAmountShare = +formatAmountAsDecimal(
             shares.get(participant.id) ?? 0,
             currency,
@@ -157,7 +129,7 @@ export async function GET(
   })
 
   const json2csvParser = new Parser({ fields })
-  const csv = json2csvParser.parse(expenses)
+  const csv = json2csvParser.parse(expenseRows)
 
   const date = new Date().toISOString().split('T')[0]
 

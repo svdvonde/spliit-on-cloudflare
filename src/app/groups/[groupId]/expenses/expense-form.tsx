@@ -1,4 +1,5 @@
 import { CategorySelector } from '@/components/category-selector'
+import { RecurrenceRule, SplitMode } from '@/db/types'
 import { CurrencySelector } from '@/components/currency-selector'
 import { ExpenseDocumentsInput } from '@/components/expense-documents-input'
 import { SubmitButton } from '@/components/submit-button'
@@ -33,7 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { RecurrenceRule, SplitMode } from '@/generated/prisma/browser'
 import { Locale } from '@/i18n/request'
 import { useAnalytics } from '@/lib/analytics/context'
 import { defaultCurrencyList, getCurrency } from '@/lib/currency'
@@ -202,8 +202,7 @@ export function ExpenseForm({
           expenseDate: expense.expenseDate ?? new Date(),
           amount: amountAsDecimal(expense.amount, groupCurrency),
           originalCurrency: expense.originalCurrency ?? group.currencyCode,
-          originalAmount:
-            expense.originalAmount != null
+          originalAmount: expense.originalAmount != null
               ? formatAmountAsDecimal(
                   expense.originalAmount,
                   getCurrency(
@@ -213,7 +212,9 @@ export function ExpenseForm({
                   ),
                 )
               : undefined,
-          conversionRate: expense.conversionRate?.toNumber(),
+          conversionRate: expense.conversionRate
+            ? Number(expense.conversionRate)
+            : undefined,
           category: expense.categoryId,
           paidBy: expense.paidById,
           paidFor: expense.paidFor.map(({ participantId, shares }) => ({

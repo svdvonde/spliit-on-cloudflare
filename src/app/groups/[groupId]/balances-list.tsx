@@ -1,4 +1,4 @@
-import { Participant } from '@/generated/prisma/browser'
+import { Participant } from '@/db/types'
 import { Balances } from '@/lib/balances'
 import { Currency } from '@/lib/currency'
 import { cn, formatCurrency } from '@/lib/utils'

@@ -1,4 +1,5 @@
-import createNextIntlPlugin from 'next-intl/plugin'
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin()
 
@@ -22,6 +23,7 @@ if (process.env.S3_UPLOAD_ENDPOINT) {
   })
 }
 
+initOpenNextCloudflareForDev();
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Emit a self-contained server into .next/standalone, containing only the
@@ -29,26 +31,13 @@ const nextConfig = {
   // stage copies that instead of a full production `node_modules`.
   output: 'standalone',
   images: {
-    remotePatterns
+    remotePatterns,
   },
   reactCompiler: true,
   // Required to run in a codespace (see https://github.com/vercel/next.js/issues/58019)
   experimental: {
     serverActions: {
-      // localhost:3000 covers local dev and same-host container access; the
-      // configured base URL covers a deployment reached under its own domain,
-      // whose server actions would otherwise be rejected as cross-origin.
-      // An unparseable value is ignored here rather than thrown: this file is
-      // evaluated before the env schema runs, and its `Invalid URL` is far less
-      // useful than the validation error the schema is about to produce.
-      allowedOrigins: (() => {
-        const base = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL
-        try {
-          return ['localhost:3000', ...(base ? [new URL(base).host] : [])]
-        } catch {
-          return ['localhost:3000']
-        }
-      })(),
+      allowedOrigins: ['localhost:3000'],
     },
   },
 }

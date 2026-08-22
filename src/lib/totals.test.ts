@@ -23,16 +23,20 @@ const SPLIT_MODES: SplitMode[] = [
   'BY_AMOUNT',
 ]
 
+const TEST_GROUP_ID = 'group'
+
 function makeExpense(partial: Partial<Expense>): Expense {
   return {
     id: 'expense',
+    groupId: TEST_GROUP_ID,
     title: 'Expense',
     amount: 0,
-    category: null,
+    category: null as any,
+    categoryId: 0,
     isReimbursement: false,
     splitMode: 'EVENLY',
     expenseDate: new Date('2024-01-01T00:00:00Z'),
-    paidBy: { id: 'alice', name: 'Alice' },
+    paidBy: { id: 'alice', name: 'Alice', groupId: TEST_GROUP_ID },
     paidFor: [],
     ...partial,
   } as unknown as Expense
@@ -48,12 +52,18 @@ function splitExpense(
     id,
     amount,
     splitMode,
-    paidBy: { id: paidFor[0][0], name: paidFor[0][0] },
+    paidBy: { id: paidFor[0][0], name: paidFor[0][0], groupId: TEST_GROUP_ID },
     paidFor: paidFor.map(([participantId, shares]) => ({
-      participant: { id: participantId, name: participantId },
+      expenseId: id,
+      participantId,
+      participant: {
+        id: participantId,
+        name: participantId,
+        groupId: TEST_GROUP_ID,
+      },
       shares,
-    })),
-  } as Partial<Expense>)
+    } as any)),
+  })
 }
 
 const groceries = { id: 1, grouping: 'Food and Drink', name: 'Groceries' }
@@ -222,7 +232,7 @@ describe('getSpendingByCategory', () => {
 
   it('treats a missing category as Uncategorized/General', () => {
     const result = getSpendingByCategory([
-      makeExpense({ amount: 200, category: null }),
+      makeExpense({ amount: 200, category: null as any }),
     ])
     expect(result).toEqual([
       {
@@ -272,7 +282,11 @@ describe('getExpensesByCategory', () => {
   })
 
   it('matches expenses without a category against the Uncategorized id (0)', () => {
-    const uncategorized = makeExpense({ id: 'a', amount: 200, category: null })
+    const uncategorized = makeExpense({
+      id: 'a',
+      amount: 200,
+      category: null as any,
+    })
     const categorized = makeExpense({
       id: 'b',
       amount: 300,
@@ -323,10 +337,28 @@ describe('getSpendingByParticipant', () => {
     const expenses = [
       makeExpense({
         amount: 1000,
-        paidBy: { id: 'alice', name: 'Alice' },
+        paidBy: { id: 'alice', name: 'Alice', groupId: TEST_GROUP_ID },
         paidFor: [
-          { participant: { id: 'alice', name: 'Alice' }, shares: 1 },
-          { participant: { id: 'bob', name: 'Bob' }, shares: 1 },
+          {
+            expenseId: 'expense',
+            participantId: 'alice',
+            participant: {
+              id: 'alice',
+              name: 'Alice',
+              groupId: TEST_GROUP_ID,
+            },
+            shares: 1,
+          },
+          {
+            expenseId: 'expense',
+            participantId: 'bob',
+            participant: {
+              id: 'bob',
+              name: 'Bob',
+              groupId: TEST_GROUP_ID,
+            },
+            shares: 1,
+          },
         ],
       }),
     ]

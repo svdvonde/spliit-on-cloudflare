@@ -1,4 +1,4 @@
-import type { RecurrenceRule } from '@/generated/prisma/client'
+import type { RecurrenceRule } from '@/db/types.js'
 import { getGroupExpenses } from '@/lib/api'
 import { ShareInput, getExpenseShares, getParticipantShare } from '@/lib/shares'
 

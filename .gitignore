@@ -1,5 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+.idea
+
 # dependencies
 /node_modules
 /.pnp
@@ -40,11 +42,7 @@ next-env.d.ts
 # db
 postgres-data
 
-# prisma generated client (regenerated via `prisma generate`)
-/src/generated
 
-# playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
+wrangler.jsonc
+.open-next
+.wrangler

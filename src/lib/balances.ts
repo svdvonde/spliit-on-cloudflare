@@ -1,6 +1,7 @@
-import { Participant } from '@/generated/prisma/browser'
 import { getGroupExpenses } from '@/lib/api'
 import { getExpenseShares } from '@/lib/shares'
+import { Participant } from '@/db/types'
+import { match } from 'ts-pattern'
 
 export type Balances = Record<
   Participant['id'],

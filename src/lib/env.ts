@@ -18,8 +18,11 @@ const interpretBlankEnvVarAsUndefined = (val: unknown): unknown =>
 
 const envSchema = z
   .object({
-    POSTGRES_URL_NON_POOLING: z.string().url(),
-    POSTGRES_PRISMA_URL: z.string().url(),
+    DATABASE_PROVIDER: z
+      .enum(['none', 'sqlite'])
+      .optional()
+      .default('none'),
+    SQLITE_URL: z.string().optional(),
     // Runtime override for the public base URL, so a prebuilt image can be
     // told where it is reachable without a rebuild. Takes precedence over
     // NEXT_PUBLIC_BASE_URL, which is baked in at build time.
@@ -133,6 +136,12 @@ const envSchema = z
       env.ENABLE_RECEIPT_EXTRACT || env.NEXT_PUBLIC_ENABLE_RECEIPT_EXTRACT
     const enableCategoryExtract =
       env.ENABLE_CATEGORY_EXTRACT || env.NEXT_PUBLIC_ENABLE_CATEGORY_EXTRACT
+    if (env.DATABASE_PROVIDER === 'sqlite' && !env.SQLITE_URL) {
+      ctx.addIssue({
+        code: ZodIssueCode.custom,
+        message: 'SQLITE_URL is required when DATABASE_PROVIDER is "sqlite"',
+      })
+    }
     if (
       enableExpenseDocuments &&
       // S3_UPLOAD_ENDPOINT is fully optional as it will only be used for providers other than AWS

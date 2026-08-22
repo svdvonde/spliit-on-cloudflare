@@ -1,3 +1,4 @@
+/*
 import path from 'node:path'
 import { defineConfig } from 'prisma/config'
 
@@ -23,3 +24,4 @@ export default defineConfig({
       '',
   },
 })
+*/

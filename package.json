@@ -1,6 +1,6 @@
 {
-  "name": "spliit2",
-  "version": "0.1.0",
+  "name": "spliit-on-cloudflare",
+  "version": "1.22.0",
   "private": true,
   "engines": {
     "node": ">=24",
@@ -14,24 +14,22 @@
     "check-types": "tsc --noEmit",
     "check-formatting": "prettier -c src e2e playwright.config.ts",
     "prettier": "prettier -w src e2e playwright.config.ts",
-    "postinstall": "prisma migrate deploy && prisma generate",
     "build-image": "./scripts/build-image.sh",
     "start-container": "docker compose --env-file container.env up",
     "test": "jest",
-    "e2e": "./scripts/e2e.sh",
-    "e2e:up": "./scripts/e2e.sh up",
-    "e2e:down": "./scripts/e2e.sh down",
-    "e2e:logs": "./scripts/e2e.sh logs",
-    "e2e:test": "./scripts/e2e.sh test",
-    "e2e:report": "playwright show-report",
-    "generate-currency-data": "ts-node -T ./src/scripts/generateCurrencyData.ts"
+    "generate-currency-data": "ts-node -T ./src/scripts/generateCurrencyData.ts",
+    "drizzle:make-migrations": "drizzle-kit generate",
+    "cloudflare:migrate:local": "wrangler d1 migrations apply spliit-db --local",
+    "cloudflare:migrate:remote": "wrangler d1 migrations apply spliit-db --remote",
+    "cloudflare:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cloudflare:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "^0.8.13",
     "@hookform/resolvers": "^5",
     "@json2csv/plainjs": "^7.0.8",
-    "@prisma/adapter-pg": "^7.0.0",
-    "@prisma/client": "^7.0.0",
+    "@libsql/client": "^0.17.0",
     "@radix-ui/react-checkbox": "^1.3.11",
     "@radix-ui/react-collapsible": "^1.1.20",
     "@radix-ui/react-dialog": "^1.1.23",
@@ -68,7 +66,6 @@
     "next13-progressbar": "^1.2.2",
     "openai": "^6.0.0",
     "pg": "^8.23.0",
-    "prisma": "^7.9.1",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -83,9 +80,12 @@
     "ts-pattern": "^5.9.0",
     "use-debounce": "^10.1.1",
     "vaul": "^1.1.2",
-    "zod": "^4"
+    "zod": "^4",
+    "@opennextjs/cloudflare": "1.20.2",
+    "drizzle-orm": "1.0.0-rc.4"
   },
   "devDependencies": {
+    "@nerdfolio/drizzle-d1-helpers": "^0.1.5",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@testing-library/dom": "^10.4.1",
@@ -101,6 +101,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "currency-list": "^1.0.8",
     "dotenv": "^17.4.2",
+    "drizzle-kit": "1.0.0-beta.9-c26fd2f",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.1",
     "jest": "^30.4.2",
@@ -111,6 +112,7 @@
     "tailwindcss": "^4.3.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "4.125.0"
   }
 }

@@ -1,4 +1,4 @@
-import { SplitMode } from '@/generated/prisma/browser'
+import { SplitMode } from '@/db/types.js'
 import { match } from 'ts-pattern'
 
 /**

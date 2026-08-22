@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Participant } from '@/generated/prisma/browser'
+import { Participant } from '@/db/types'
 import { Reimbursement } from '@/lib/balances'
 import { Currency } from '@/lib/currency'
 import { formatCurrency } from '@/lib/utils'

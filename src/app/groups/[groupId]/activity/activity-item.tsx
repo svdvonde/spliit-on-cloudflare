@@ -1,4 +1,5 @@
 'use client'
+
 import { Button } from '@/components/ui/button'
 import { ActivityType, Participant } from '@/db/types'
 import { DateTimeStyle, cn, formatDate } from '@/lib/utils'

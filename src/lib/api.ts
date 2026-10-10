@@ -58,6 +58,10 @@ export async function createExpense(
   expenseFormValues: ExpenseFormValues,
   groupId: string,
   participantId?: string,
+  // The expense form mints the id up front so the split it previews is the
+  // one the saved expense gets (the id seeds who takes the leftover minor
+  // unit, see `getExpenseShares`).
+  expenseId: string = randomId(),
 ) {
   const db = getDb()
 
@@ -74,8 +78,6 @@ export async function createExpense(
       throw new Error(`Invalid participant: ${participant}`)
     }
   }
-
-  const expenseId = randomId()
 
   const logActivityStatement = makeLogActivityStatement(
     groupId,
@@ -183,14 +185,27 @@ export async function deleteExpense(
 }
 
 export async function getGroupExpensesParticipants(groupId: string) {
-  const expenses = await getGroupExpenses(groupId)
+  const db = getDb()
+  const [payers, paidFor] = await Promise.all([
+    db
+      .selectDistinct({ participantId: schema.expense.paidById })
+      .from(schema.expense)
+      .where(eq(schema.expense.groupId, groupId)),
+    db
+      .selectDistinct({ participantId: schema.expensePaidFor.participantId })
+      .from(schema.expensePaidFor)
+      .innerJoin(
+        schema.expense,
+        eq(schema.expensePaidFor.expenseId, schema.expense.id),
+      )
+      .where(eq(schema.expense.groupId, groupId)),
+  ])
+
   return Array.from(
-    new Set(
-      expenses.flatMap((expense) => [
-        expense.paidBy.id,
-        ...expense.paidFor.map((paidFor) => paidFor.participant.id),
-      ]),
-    ),
+    new Set([
+      ...payers.map((expense) => expense.participantId),
+      ...paidFor.map((row) => row.participantId),
+    ]),
   )
 }
 

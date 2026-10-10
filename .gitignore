@@ -46,3 +46,11 @@ postgres-data
 wrangler.jsonc
 .open-next
 .wrangler
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# performance suite output (perf/run.ts)
+/perf-report.json

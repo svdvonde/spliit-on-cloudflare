@@ -11,6 +11,13 @@
   "Header": {
     "groups": "Groups"
   },
+  "Errors": {
+    "title": "Something went wrong",
+    "groupTitle": "Couldn’t load this group",
+    "generic": "Please try again. If this keeps happening, reload the page.",
+    "reference": "Reference: {digest}",
+    "retry": "Try again"
+  },
   "Footer": {
     "madeIn": "Made in Montréal, Québec 🇨🇦",
     "builtBy": "Built by <author>Sebastien Castiel</author> and <source>contributors</source>"
@@ -54,6 +61,8 @@
     "create": "Create",
     "createGroup": "Create group",
     "loadingRecent": "Loading recent groups…",
+    "loadError": "Could not load your groups. Try again.",
+    "retry": "Retry",
     "CreateOptions": {
       "openMenu": "Open create options",
       "newGroup": "New group",
@@ -73,7 +82,9 @@
       "description": "Your combined balance across all your groups.",
       "owedToYou": "You are owed",
       "youOwe": "You owe",
-      "settledUp": "You are all settled up across your groups."
+      "settledUp": "You are all settled up across your groups.",
+      "loadError": "Could not load your total balance. Try again.",
+      "retry": "Retry"
     },
     "recent": "Recent groups",
     "starred": "Starred groups",
@@ -396,6 +407,23 @@
         "WEEKLY": "{count, plural, one {# weekly expense} other {# weekly expenses}}",
         "MONTHLY": "{count, plural, one {# monthly expense} other {# monthly expenses}}"
       }
+    },
+    "MonthlySpending": {
+      "title": "Monthly spending",
+      "description": "Spending by month and category for the selected period.",
+      "groupingLabel": "Category grouping",
+      "chartTypeLabel": "Chart type",
+      "stackedTitle": "Monthly categories",
+      "roundAmountsLabel": "Round amounts",
+      "noData": "No spending data yet.",
+      "ChartTypes": {
+        "bars": "Stacked bars",
+        "columns": "Stacked columns"
+      },
+      "GroupingOptions": {
+        "categoryGroup": "Categories",
+        "category": "Detailed"
+      }
     }
   },
   "Activity": {
@@ -445,6 +473,9 @@
     "min2": "Enter at least two characters.",
     "max5": "Enter at most five characters.",
     "max50": "Enter at most 50 characters.",
+    "max200": "Enter at most 200 characters.",
+    "max5000": "Enter at most 5,000 characters.",
+    "max10000": "Enter at most 10,000 characters.",
     "duplicateParticipantName": "Another participant already has this name.",
     "titleRequired": "Please enter a title.",
     "invalidNumber": "Invalid number.",
@@ -455,8 +486,8 @@
     "paidByRequired": "You must select a participant.",
     "paidForMin1": "The expense must be paid for at least one participant.",
     "noZeroShares": "All shares must be higher than 0.",
-    "amountSum": "Sum of amounts must equal the expense amount.",
-    "percentageSum": "Sum of percentages must equal 100."
+    "amountSum": "The amounts add up to {sum}, {difference} {direction, select, over {more} other {less}} than the expense amount ({amount}).",
+    "percentageSum": "The percentages add up to {sum}%, {difference}% {direction, select, over {more} other {less}} than 100%."
   },
   "Categories": {
     "search": "Search category...",

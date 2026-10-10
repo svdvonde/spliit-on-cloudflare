@@ -1,11 +1,12 @@
 'use client'
+
 import { AddGroupByUrlButton } from '@/app/groups/add-group-by-url-button'
 import {
-  RecentGroups,
   getArchivedGroups,
   getRecentGroups,
   getStarredGroups,
   saveRecentGroup,
+  RecentGroups
 } from '@/app/groups/recent-groups-helpers'
 import { FileImportModal } from '@/components/file-import-modal'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { getGroups } from '@/lib/api'
+import { MAX_GROUPS_PER_QUERY } from '@/lib/group-query-limits'
 import { trpc } from '@/trpc/client'
 import { AppRouterOutput } from '@/trpc/routers/_app'
 import { ChevronDown, Loader2 } from 'lucide-react'
@@ -113,9 +115,22 @@ function RecentGroupList_({
   refreshGroupsFromStorage: () => void
 }) {
   const t = useTranslations('Groups')
-  const { data, isLoading } = trpc.groups.list.useQuery({
-    groupIds: groups.map((group) => group.id),
+  const { data, isLoading, isError, refetch } = trpc.groups.list.useQuery({
+    groupIds: groups.map((group) => group.id).slice(0, MAX_GROUPS_PER_QUERY),
   })
+
+  if (isError) {
+    return (
+      <GroupsPage reload={refreshGroupsFromStorage}>
+        <div className="text-sm space-y-2">
+          <p>{t('loadError')}</p>
+          <Button variant="secondary" onClick={() => refetch()}>
+            {t('retry')}
+          </Button>
+        </div>
+      </GroupsPage>
+    )
+  }
 
   if (isLoading || !data) {
     return (

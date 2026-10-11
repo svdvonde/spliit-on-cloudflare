@@ -8,6 +8,7 @@ export const group = sqliteTable("Group", {
 	currency: text().default("$").notNull(),
 	currencyCode: text(),
 	createdAt: integer({ mode: 'timestamp'}).default(sql`(strftime('%s', 'now'))`).notNull(),
+  deleteAt: integer({ mode: "timestamp" }),
 });
 
 
@@ -100,7 +101,7 @@ export const expensePaidFor = sqliteTable("ExpensePaidFor", {
 ]);
 
 
-export type ActivityType = "UPDATE_GROUP" | "CREATE_EXPENSE" | "UPDATE_EXPENSE" | "DELETE_EXPENSE";
+export type ActivityType = "UPDATE_GROUP" | "CREATE_EXPENSE" | "UPDATE_EXPENSE" | "DELETE_EXPENSE" | 'SCHEDULE_GROUP_DELETION' | 'RESTORE_GROUP';
 
 export const activity = sqliteTable('Activity', {
   id: text().primaryKey().notNull(),

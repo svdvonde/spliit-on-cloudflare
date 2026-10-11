@@ -36,6 +36,9 @@ export const ActivityType = {
   CREATE_EXPENSE: 'CREATE_EXPENSE',
   UPDATE_EXPENSE: 'UPDATE_EXPENSE',
   DELETE_EXPENSE: 'DELETE_EXPENSE',
+  SCHEDULE_GROUP_DELETION: 'SCHEDULE_GROUP_DELETION',
+  RESTORE_GROUP: 'RESTORE_GROUP'
+
 } as const
 
 export type ActivityType = (typeof ActivityType)[keyof typeof ActivityType]

@@ -2,7 +2,7 @@ import { getDb } from '@/db/db'
 import * as schema from '@/db/schema'
 import { ActivityType,RecurrenceRule } from '@/db/types'
 import { ExpenseFormValues,GroupFormValues } from '@/lib/schemas'
-import { and,count,eq,inArray,isNull } from 'drizzle-orm'
+import { and,count,eq,gt,inArray,isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 /**
@@ -182,6 +182,73 @@ export async function deleteExpense(
       ),
     )
   await db.batch([logActivityStatement, deleteStatement])
+}
+
+// Instead of deleting a group and all its data right away, it is scheduled for
+// deletion, and can be restored during this grace period. Once it is over, the
+// group is purged by src/lib/group-deletion.ts.
+const GROUP_DELETION_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000
+
+export async function scheduleGroupDeletion(
+  groupId: string,
+  groupName: string,
+  participantId?: string,
+) {
+  const db = getDb()
+  // A single conditional update, so that two concurrent requests cannot both
+  // succeed, nor push the deletion date back.
+  const updatedGroups = await db
+    .update(schema.group)
+    .set({ deleteAt: new Date(Date.now() + GROUP_DELETION_GRACE_PERIOD_MS) })
+    .where(
+      and(
+        eq(schema.group.id, groupId),
+        eq(schema.group.name, groupName),
+        isNull(schema.group.deleteAt),
+      ),
+    )
+    .returning({ id: schema.group.id })
+  if (updatedGroups.length === 0) {
+    const group = await getGroup(groupId)
+    if (!group) throw new Error('Invalid group ID')
+    if (group.deleteAt)
+      throw new Error('Group is already scheduled for deletion')
+    throw new Error('Group name does not match')
+  }
+
+  await db.batch([
+    makeLogActivityStatement(
+      groupId,
+      ActivityType.SCHEDULE_GROUP_DELETION,
+      { participantId },
+    ),
+  ])
+}
+
+export async function restoreGroup(groupId: string, participantId?: string) {
+  const db = getDb()
+  // Once its deletion date has passed, the group may be being purged: it can
+  // no longer be restored.
+  const restoredGroups = await db
+    .update(schema.group)
+    .set({ deleteAt: null })
+    .where(
+      and(
+        eq(schema.group.id, groupId),
+        gt(schema.group.deleteAt, new Date()),
+      ),
+    )
+    .returning({ id: schema.group.id })
+  if (restoredGroups.length === 0)
+    throw new Error(
+      'Group is not scheduled for deletion, or can no longer be restored',
+    )
+
+  await db.batch([
+    makeLogActivityStatement(groupId, ActivityType.RESTORE_GROUP, {
+      participantId,
+    }),
+  ])
 }
 
 export async function getGroupExpensesParticipants(groupId: string) {
@@ -420,7 +487,7 @@ export async function updateExpense(
       return db
         .insert(schema.expenseDocument)
         .values({
-          id: document.id,
+          id: randomId(),
           expenseId,
           url: document.url,
           width: document.width,
@@ -636,8 +703,14 @@ export async function getGroupExpenses(
       },
     },
     where: {
-      groupId: groupId,
-      title: options?.filter ? { ilike: `%${options.filter}%` } : undefined,
+      groupId,
+      // Search matches the title or the notes (#601).
+      OR: options?.filter
+        ? [
+            { title: { ilike: `%${options.filter}%` } },
+            { notes: { ilike: `%${options.filter}%` } },
+          ]
+        : undefined,
     },
     orderBy: {
       expenseDate: 'desc',
@@ -832,12 +905,6 @@ async function createRecurringExpenses() {
         ...destructeredCurrentExpenseRecord
       } = currentExpenseRecord
 
-      // Use a transacton to ensure that the only one expense is created for the RecurringExpenseLink
-      // just in case two clients are processing the same RecurringExpenseLink at the same time
-
-      const existingExpenseDocumentIds = currentExpenseRecord.documents.map(
-        (document) => document.id,
-      )
       await db.batch([
         db.insert(schema.expense).values({
           ...destructeredCurrentExpenseRecord,
@@ -847,23 +914,30 @@ async function createRecurringExpenses() {
           id: newExpenseId,
           expenseDate: newExpenseDate,
         }),
-        db.insert(schema.expensePaidFor).values(
-          currentExpenseRecord.paidFor.map((paidFor) => ({
-            expenseId: newExpenseId,
-            participantId: paidFor.participantId,
-            shares: paidFor.shares,
-            documents: existingExpenseDocumentIds,
-          })),
-        ),
-        db
-          .update(schema.expenseDocument)
-          .set({ expenseId: newExpenseId })
-          .where(
-            inArray(
-              schema.expenseDocument.id,
-              currentExpenseRecord.documents.map((document) => document.id),
-            ),
-          ),
+        ...(currentExpenseRecord.paidFor.length > 0
+          ? [
+              db.insert(schema.expensePaidFor).values(
+                currentExpenseRecord.paidFor.map((paidFor) => ({
+                  expenseId: newExpenseId,
+                  participantId: paidFor.participantId,
+                  shares: paidFor.shares,
+                })),
+              ),
+            ]
+          : []),
+        ...(currentExpenseRecord.documents.length > 0
+          ? [
+              db.insert(schema.expenseDocument).values(
+                currentExpenseRecord.documents.map((document) => ({
+                  id: randomId(),
+                  expenseId: newExpenseId,
+                  url: document.url,
+                  width: document.width,
+                  height: document.height,
+                })),
+              ),
+            ]
+          : []),
         db.insert(schema.recurringExpenseLink).values({
           id: newRecurringExpenseLinkId,
           groupId: currentExpenseRecord.groupId,

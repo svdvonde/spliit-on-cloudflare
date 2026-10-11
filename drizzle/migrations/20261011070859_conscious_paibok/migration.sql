@@ -1,0 +1,1 @@
+ALTER TABLE `Group` ADD `deleteAt` integer;
